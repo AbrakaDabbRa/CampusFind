@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="ph.edu.xu.campusfind" version="0.2.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <name>CampusFind</name>
+    <description>Lost and found app for Xavier University - Ateneo de Cagayan</description>
+    <author email="team@example.com">CampusFind Team</author>
+    <content src="index.html" />
+    <access origin="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <preference name="DisallowOverscroll" value="true" />
+    <preference name="BackgroundColor" value="#FF17356B" />
+    <preference name="StatusBarBackgroundColor" value="#17356B" />
+    <preference name="Orientation" value="portrait" />
+    <platform name="android">
+        <preference name="android-minSdkVersion" value="24" />
+    </platform>
+</widget>
