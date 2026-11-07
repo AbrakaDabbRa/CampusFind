@@ -17,7 +17,8 @@ admin@xu.edu.ph    - admin   (any password, 6+ characters)
 
 Cordova Android app. All screens are in www/index.html (HTML/CSS/JS, mock data).
 
-Features
+## Features
+
 Register/login with school email (@xu.edu.ph only, password 6+ chars)
 Post Lost or Found reports (category, location, date, optional photo)
 Found reports can record which authority the item was handed to
