@@ -1,4 +1,4 @@
-# CampusFind (Milestone 2 - UI build)
+# CampusFind (Milestone 4 - Feature Integration and Testing build)
 Cordova Android app. All screens are in www/index.html (HTML/CSS/JS, mock data).
 
 Build and run
@@ -24,6 +24,15 @@ Claim flow: owner describes private details, admin approves/rejects, approved ow
 Admin dashboard: reports to review, claims to review, handover (mark as returned), and all records search
 "Mine" screen: your reports and claims with status
 Status flow
+
+Milestone 4 updates:
+added Working Firebase Database 
+added XU email requirements 
+added extra locations found/lost 
+
+firebase setup is in www/app.js
+authentication:Email/Password sign in 
+firebase collections: users, reports, claims
 
 Report: pending -> open -> claim_pending -> returned (or rejected) Claim: pending -> approved / rejected
 

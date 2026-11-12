@@ -21,10 +21,8 @@ const serverTime = () =>
     firebase.firestore.FieldValue.serverTimestamp();
 
 
-/* =====================================================
-   2. APPLICATION CONSTANTS
-====================================================== */
-var CATEGORIES = [
+// Application Constants:
+var CATS = [
     "IDs & Cards", "Wallets & Bags", "Electronics","Calculators & School Supplies", "Clothing", "Keys", "Others"
 ];
 
@@ -35,18 +33,14 @@ var PLACES = [
 
 var AUTH = [
     "Guard Post (Main Gate)",
-    "Library Desk",
-    "Faculty Office",
-    "Security Office",
-    "Other"
+    "Library Desk", "Office of Student Affairs",
+    "Faber Hall Faculty", "Security Office", "Other"
 ];
 
 var EMAIL_DOMAIN = "@xu.edu.ph";
 
 
-/* =====================================================
-   3. FIRESTORE DATA
-====================================================== */
+//Fire store data
 
 var db = {
     reports: [],
@@ -57,9 +51,7 @@ var unsubscribeReports = null;
 var unsubscribeClaims = null;
 
 
-/* =====================================================
-   4. APPLICATION STATE
-====================================================== */
+//Application State
 
 var S = {
     user: null,
@@ -80,11 +72,7 @@ var S = {
 
 var draft = {};
 
-
-/* =====================================================
-   5. HELPER FUNCTIONS
-====================================================== */
-
+//Helper Functions 
 function $(id) {
     return document.getElementById(id);
 }
