@@ -1,28 +1,7 @@
-/* =====================================================
-   auth.js - SCHOOL EMAIL ACCOUNTS (Firebase)
-
-   Replaces in your Firebase index.html:
-     section 7  (doAuth, logout)
-     section 8  (vLogin)
-     section 17 (auth.onAuthStateChanged ... )
-   Keep: firebase config, `auth`, `firestore`, `serverTime`,
-         S, db, draw, esc, $, toast,
-         startDataListeners, stopDataListeners.
-
-   Load this file LAST (after everything it uses).
-====================================================== */
-
-
 /* ---------- 1. SETTINGS ---------- */
 
 // Student emails use @my.xu.edu.ph, staff/admin use @xu.edu.ph
 var EMAIL_DOMAINS = ["@my.xu.edu.ph", "@xu.edu.ph"];
-
-// true  = a new account must click the link in the verification
-//         email before it can use the app (admins are exempt, so
-//         hand-made admin accounts without a real inbox still work)
-// false = skip verification (only for quick testing)
-var REQUIRE_VERIFIED_EMAIL = true;
 
 var authBusy = false;
 
@@ -73,10 +52,6 @@ function authMessage(error) {
 /* ---------- 3. SCREENS ---------- */
 
 function vLogin() {
-    if (S.view === "verify") {
-        return vVerify();
-    }
-
     return `
         <div class="hero">
             <i></i>
@@ -133,43 +108,7 @@ function vLogin() {
     `;
 }
 
-function vVerify() {
-    return `
-        <div class="hero">
-            <i></i>
-            <h1>Verify your email</h1>
-            <p>We sent a link to ${esc(S.verifyEmail)}.</p>
-        </div>
-
-        <main>
-            <div class="card">
-                <p style="margin-bottom:10px">
-                    Open the email, tap the link, then come back here and
-                    press the button below. Check your spam folder too.
-                </p>
-
-                <div class="err" id="er"></div>
-
-                <button class="btn" onclick="checkVerified()">
-                    I've verified my email
-                </button>
-
-                <button class="btn ghost" style="margin-top:8px"
-                    onclick="resendVerification()">
-                    Resend email
-                </button>
-
-                <button class="btn ghost" style="margin-top:8px"
-                    onclick="logout()">
-                    Log out
-                </button>
-            </div>
-        </main>
-    `;
-}
-
-
-/* ---------- 4. REGISTER / LOG IN ---------- */
+/*Registration / login functions*/
 
 async function doAuth() {
     if (authBusy) return;
@@ -217,12 +156,12 @@ async function doAuth() {
 
             try {
                 await credential.user.updateProfile({ displayName: name });
-                await credential.user.sendEmailVerification();
-                toast("Account created. Check your email to verify it.");
-            } catch (mailError) {
-                console.error("Verification email error:", mailError);
-                toast("Account created, but the email could not be sent. Tap Resend.");
+            } catch (profileError) {
+                // Not fatal: loadSession() falls back to S.pendingName
+                console.error("Profile update error:", profileError);
             }
+
+            toast("Account created.");
 
             S.reg = false;
 
@@ -266,47 +205,6 @@ async function resetPassword() {
 
     // Same message whether or not the account exists
     toast("If an account exists, a reset link was sent.");
-}
-
-
-/*Email verification*/
-
-async function resendVerification() {
-    var user = auth.currentUser;
-    var er = $("er");
-
-    if (!user) return;
-
-    try {
-        await user.sendEmailVerification();
-        toast("Verification email sent.");
-    } catch (error) {
-        console.error("Resend error:", error);
-        if (er) er.textContent = authMessage(error);
-    }
-}
-
-async function checkVerified() {
-    var user = auth.currentUser;
-    var er = $("er");
-
-    if (!user) return;
-
-    try {
-        await user.reload();           // pull the latest verified status
-        await user.getIdToken(true);   // refresh the token so Firestore rules see email_verified = true
-    } catch (error) {
-        console.error("Reload error:", error);
-        if (er) er.textContent = authMessage(error);
-        return;
-    }
-
-    if (auth.currentUser.emailVerified) {
-        await loadSession(auth.currentUser);
-    } else if (er) {
-        er.textContent =
-        "Not verified yet. Tap the link in the email, then try again.";
-    }
 }
 
 
@@ -355,28 +253,12 @@ async function loadSession(firebaseUser) {
         var profile = userDoc.data();
         var isAdmin = profile.admin === true;
 
-        //Unverified students wait on the verify screen
-        if (REQUIRE_VERIFIED_EMAIL &&
-        !firebaseUser.emailVerified &&
-        !isAdmin) {
-        stopDataListeners();
-        S.user = null;
-        S.verifyEmail = firebaseUser.email;
-        S.view = "verify";
-        S.authReady = true;
-
-        draw();
-        return;
-        }
-
         S.user = {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             name: profile.name || firebaseUser.email.split("@")[0],
             admin: isAdmin
         };
-
-        S.verifyEmail = "";
         S.view = "feed";
         S.authReady = true;
 
@@ -404,7 +286,6 @@ auth.onAuthStateChanged(async function(firebaseUser) {
         stopDataListeners();
 
         S.user = null;
-        S.verifyEmail = "";
         S.view = "login";
         S.authReady = true;
 
