@@ -25,10 +25,13 @@ Admin dashboard: reports to review, claims to review, handover (mark as returned
 "Mine" screen: your reports and claims with status
 Status flow
 
-Milestone 4 updates:
+Milestone 5 updates:
 added Working Firebase Database 
 added XU email requirements 
 added extra locations found/lost 
+added Hidden description to users to increase security
+added "remove post/post claimed" for admin side
+
 
 firebase setup is in www/app.js
 authentication:Email/Password sign in 
