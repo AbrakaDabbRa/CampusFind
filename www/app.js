@@ -1,6 +1,4 @@
-/* =====================================================
-   1. FIREBASE CONFIGURATION
-====================================================== */
+//Firebase Configuration 
 
 const firebaseConfig = {
     apiKey: "AIzaSyDufNV9vfsItdh0Wb_O1gHlyadPBmm8GqY",
@@ -79,14 +77,10 @@ function $(id) {
 
 function esc(s) {
     return String(s == null ? "" : s).replace(
-        /[&<>"']/g,
-        function(c) {
-            return {
-                "&": "&amp;",
-                "<": "&lt;",
-                ">": "&gt;",
-                '"': "&quot;",
-                "'": "&#39;"
+    /[&<>"']/g,
+    function(c) {
+     return {
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;","'": "&#39;"
             }[c];
         }
     );
@@ -94,10 +88,8 @@ function esc(s) {
 
 function toast(message) {
     var t = $("toast");
-
     t.textContent = message;
     t.className = "on";
-
     setTimeout(function() {
         t.className = "";
     }, 2000);
@@ -105,12 +97,12 @@ function toast(message) {
 
 function label(s) {
     return {
-        open: "Open",
-        claim_pending: "Claim Pending",
-        returned: "Returned",
-        pending: "Pending Review",
-        rejected: "Rejected",
-        approved: "Approved"
+    open: "Open",
+    claim_pending: "Claim Pending",
+    returned: "Returned",
+    pending: "Pending Review",
+    rejected: "Rejected",
+    approved: "Approved"
     }[s] || s;
 }
 
@@ -118,6 +110,14 @@ function rep(id) {
     return db.reports.find(function(r) {
         return r.id === id;
     });
+}
+
+// Only admins and the person who posted a report can read its
+// description. Everyone else must describe the item themselves when
+// claiming it, so people can't just copy the details.
+function canSeeDesc(r) {
+    return !!S.user &&
+        (S.user.admin === true || r.ownerUid === S.user.uid);
 }
 
 function newestFirst(a, b) {
@@ -145,29 +145,29 @@ function matches(r) {
     var w = words(r.title + " " + r.desc);
 
     return db.reports
-        .filter(function(o) {
-            return o.type !== r.type &&
-                o.cat === r.cat &&
+    .filter(function(o) {
+        return o.type !== r.type &&
+            o.cat === r.cat &&
                 (
-                    o.status === "open" ||
-                    o.status === "claim_pending"
+                o.status === "open" ||
+                o.status === "claim_pending"
                 );
         })
         .map(function(o) {
-            var ow = words(o.title + " " + o.desc);
+        var ow = words(o.title + " " + o.desc);
 
-            return {
-                r: o,
-                n: w.filter(function(x) {
-                    return ow.indexOf(x) > -1;
-                }).length
-            };
+        return {
+            r: o,
+            n: w.filter(function(x) {
+                return ow.indexOf(x) > -1;
+            }).length
+        };
         })
         .filter(function(m) {
-            return m.n > 0;
+        return m.n > 0;
         })
         .sort(function(a, b) {
-            return b.n - a.n;
+        return b.n - a.n;
         });
 }
 
@@ -187,9 +187,7 @@ function setNav(view) {
 }
 
 
-/* =====================================================
-   6. FIRESTORE REAL-TIME LISTENERS
-====================================================== */
+//Firestore realtime listeners during usage
 
 function stopDataListeners() {
     if (unsubscribeReports) {
@@ -209,7 +207,7 @@ function stopDataListeners() {
 function startDataListeners() {
     stopDataListeners();
 
-    // REPORTS
+    // Reports 
     unsubscribeReports = firestore
         .collection("reports")
         .orderBy("createdAt", "desc")
@@ -217,8 +215,8 @@ function startDataListeners() {
 
             db.reports = snapshot.docs.map(function(doc) {
                 return {
-                    ...doc.data(),
-                    id: doc.id
+                ...doc.data(),
+                id: doc.id
                 };
             });
 
@@ -227,13 +225,13 @@ function startDataListeners() {
             }
 
         }, function(error) {
-            console.error("Reports loading error:", error);
-            toast("Unable to load reports. Check Firestore permissions.");
+        console.error("Reports loading error:", error);
+        toast("Unable to load reports. Check Firestore permissions.");
         });
 
 
-    // CLAIMS (admins see all; students only their own, so private
-    // claim details are never downloaded by other users)
+    // CLAIMS (admins see all; students only their own report,)
+    // claim details are never downloaded by other users(So that they wont be randomly be claimed by other users)
     var claimsQuery = S.user && S.user.admin
         ? firestore.collection("claims")
         : firestore.collection("claims")
@@ -244,8 +242,8 @@ function startDataListeners() {
 
             db.claims = snapshot.docs.map(function(doc) {
                 return {
-                    ...doc.data(),
-                    id: doc.id
+                ...doc.data(),
+                id: doc.id
                 };
             });
 
@@ -260,16 +258,12 @@ function startDataListeners() {
 }
 
 
-/* (Firebase Authentication now lives in auth.js) */
+//Firebase authentication moved to Auth.js File
+
+//Log in and registration now moved to Auth.js File
 
 
-/* (Login And Registration Screen now lives in auth.js) */
-
-
-/* =====================================================
-   9. REPORT CARDS AND FEED
-====================================================== */
-
+//Reports and feed on main page-----/
 function card(r) {
     return `
         <div class="card item" onclick="go('detail','${esc(r.id)}')">
@@ -317,10 +311,12 @@ function vFeed() {
 
         var q = S.q.toLowerCase();
 
+        // Hidden descriptions must not be searchable either
+        //Newly added feature
         return !q ||
-            (r.title + " " + r.desc + " " + r.place)
-                .toLowerCase()
-                .indexOf(q) > -1;
+            (r.title + " " + (canSeeDesc(r) ? r.desc : "") + " " + r.place)
+            .toLowerCase()
+            .indexOf(q) > -1;
 
     }).sort(newestFirst);
 
@@ -364,9 +360,7 @@ function vFeed() {
 }
 
 
-/* =====================================================
-   10. ITEM DETAILS AND MATCHING
-====================================================== */
+//Item detais and matching descriptions/cat/type
 
 function vDetail() {
     var r = rep(S.sel);
@@ -384,7 +378,6 @@ function vDetail() {
 
     h += `
         <div class="card">
-
             <h2 style="margin-top:0">${esc(r.title)}</h2>
 
             <span class="tag t-${r.type}">
@@ -395,7 +388,13 @@ function vDetail() {
                 ${label(r.status)}
             </span>
 
-            <p style="margin:10px 0">${esc(r.desc)}</p>
+            ${canSeeDesc(r)
+                ? `<p style="margin:10px 0">${esc(r.desc)}</p>`
+                : `<p class="meta" style="margin:10px 0">
+                    Description hidden. If this is yours, describe it
+                    in your claim.
+                </p>`
+            }
 
             <div class="meta">
                 Category: ${esc(r.cat)}<br>
@@ -403,19 +402,17 @@ function vDetail() {
                 Date: ${esc(r.date)}<br>
                 Posted by: ${esc(r.owner)}
             </div>
-        </div>
-    `;
+        </div> `;
 
     if (r.type === "found") {
         h += `
             <div class="pick">
-                ${r.handed
-                    ? `<b>Handed to:</b> ${esc(r.auth || "a local authority")}`
-                    : `<b>Not yet handed to an authority.</b>
-                        The finder is still holding this item.`
+            ${r.handed
+                ? `<b>Handed to:</b> ${esc(r.auth || "a local authority")}`
+                : `<b>Not yet handed to an authority.</b>
+                The finder is still holding this item.`
                 }
-            </div>
-        `;
+            </div> `;
     }
 
     var myc = db.claims.find(function(c) {
@@ -426,40 +423,38 @@ function vDetail() {
     if (myc) {
         h += `
             <div class="card">
-                <b>Your claim</b>
+            <b>Your claim</b>
 
-                <span class="tag s-${myc.status}">
-                    ${myc.status === "pending"
-                        ? "Awaiting admin"
-                        : label(myc.status)}
-                </span>
+            <span class="tag s-${myc.status}">
+                ${myc.status === "pending"
+                ? "Awaiting admin"
+                : label(myc.status)}
+            </span>
 
                 <p class="meta" style="margin-top:6px">
                     ${esc(myc.details)}
                 </p>
 
                 ${myc.status === "approved"
-                    ? `<div class="pick">
-                        Approved. Pick up at:
-                        <b>${esc(r.auth || "the local authority")}</b>.
-                        Bring your school ID.
-                    </div>`
-                    : ""
+                ? `<div class="pick">
+                    Approved. Pick up at:
+                    <b>${esc(r.auth || "the local authority")}</b>.
+                    Bring your school ID.
+                </div>`
+                : ""
                 }
-            </div>
-        `;
+            </div>`;
 
     } else if (
         r.type === "found" &&
         !mine &&
-        r.status === "open"
-    ) {
+        r.status === "open") 
+        {
         h += `
             <button class="btn gold"
                 onclick="go('claim','${esc(r.id)}')">
                 This is mine - claim it
-            </button>
-        `;
+            </button>`;
     }
 
     var m = matches(r);
@@ -481,10 +476,7 @@ function vDetail() {
 }
 
 
-/* =====================================================
-   11. CLAIM SUBMISSION
-====================================================== */
-
+//Claims submission -------/
 function vClaim() {
     var r = rep(S.sel);
 
@@ -581,9 +573,8 @@ async function sendClaim(id) {
 }
 
 
-/* =====================================================
-   12. REPORT CREATION
-====================================================== */
+//Report creation------/
+
 
 function vPost() {
     var f = S.ptype === "found";
@@ -814,9 +805,7 @@ async function sendReport() {
 }
 
 
-/* =====================================================
-   13. USER ACTIVITY
-====================================================== */
+//User Activity
 
 function vMine() {
     var rs = db.reports.filter(function(r) {
@@ -871,9 +860,7 @@ function vMine() {
 }
 
 
-/* =====================================================
-   14. ADMIN DASHBOARD
-====================================================== */
+//Admin Dashboard
 
 function vAdmin() {
     var pr = db.reports.filter(function(r) {
@@ -903,7 +890,7 @@ function vAdmin() {
                 ["Reports to review", pr.length, "reports"],
                 ["Claims to review", pc.length, "claims"],
                 ["Ready for handover", ac.length, "handover"],
-                ["Returned", rt.length, "all"]
+                ["Returned", rt.length, "returned"]
             ].map(function(x) {
                 return `
                     <button class="stat"
@@ -921,6 +908,7 @@ function vAdmin() {
                 ["reports", "Reports"],
                 ["claims", "Claims"],
                 ["handover", "Handover"],
+                ["returned", "Returned"],
                 ["all", "All records"]
             ].map(function(t) {
                 return `
@@ -938,41 +926,40 @@ function vAdmin() {
             ? pr.map(function(r) {
                 return `
                     <div class="card">
-                        <h3>${esc(r.title)}</h3>
+                    <h3>${esc(r.title)}</h3>
 
-                        <span class="tag t-${r.type}">
-                            ${r.type === "lost" ? "Lost" : "Found"}
-                        </span>
+                    <span class="tag t-${r.type}">
+                        ${r.type === "lost" ? "Lost" : "Found"}
+                    </span>
 
-                        <div class="meta">
-                            ${esc(r.cat)} •
-                            ${esc(r.place)} •
-                            ${esc(r.date)}
-                        </div>
+                    <div class="meta">
+                        ${esc(r.cat)} •
+                        ${esc(r.place)} •
+                        ${esc(r.date)}
+                    </div>
 
-                        ${r.photo
-                            ? `<img class="photo"
-                                style="margin-top:8px"
-                                src="${esc(r.photo)}" alt="">`
+                    ${r.photo
+                    ? `<img class="photo"
+                        style="margin-top:8px"
+                        src="${esc(r.photo)}" alt="">`
                             : ""
                         }
 
-                        <p style="margin:8px 0">
-                            ${esc(r.desc)}
-                        </p>
+                    <p style="margin:8px 0">
+                        ${esc(r.desc)}
+                    </p>
 
-                        <div class="meta">
-                            Posted by ${esc(r.owner)}
-                        </div>
-
-                        ${r.type === "found"
+                    <div class="meta">
+                        Posted by ${esc(r.owner)}
+                    </div>
+                    ${r.type === "found"
                             ? `<div class="pick">
                                 ${r.handed
-                                    ? `Handed to:
-                                        <b>${esc(r.auth)}</b>.
-                                        Check with them that the item is there.`
-                                    : `Not handed to an authority.
-                                        Confirm with the finder.`
+                                ? `Handed to:
+                                <b>${esc(r.auth)}</b>.
+                                Check with them that the item is there.`
+                                : `Not handed to an authority.
+                                Confirm with the finder.`
                                 }
                             </div>`
                             : ""
@@ -991,8 +978,7 @@ function vAdmin() {
                             onclick="decide('r','${esc(r.id)}','rejected')">
                             Reject
                         </button>
-                    </div>
-                `;
+                    </div> `;
             }).join("")
             : `<div class="empty">
                 No reports waiting for review.
@@ -1007,36 +993,35 @@ function vAdmin() {
                 if (!r) return "";
 
                 return `
-                    <div class="card">
-                        <h3>${esc(r.title)}</h3>
+                <div class="card">
+                    <h3>${esc(r.title)}</h3>
 
-                        <div class="meta">
-                            Item posted by ${esc(r.owner)}
-                        </div>
-
-                        <div class="meta" style="margin-top:6px">
-                            <b>Item description:</b>
-                            ${esc(r.desc)}
-                        </div>
-
-                        <div class="pick"
-                            style="background:#fff8e6;border-color:#f0d78c">
-
-                            <b>Claimant (${esc(c.by)}) says:</b><br>
-                            ${esc(c.details)}
-                        </div>
-
-                        <button class="btn sm ok"
-                            onclick="decide('c','${esc(c.id)}','approved')">
-                            Approve claim
-                        </button>
-
-                        <button class="btn sm bad"
-                            onclick="decide('c','${esc(c.id)}','rejected')">
-                            Reject claim
-                        </button>
+                    <div class="meta">
+                        Item posted by ${esc(r.owner)}
                     </div>
-                `;
+
+                    <div class="meta" style="margin-top:6px">
+                        <b>Item description:</b>
+                        ${esc(r.desc)}
+                    </div>
+
+                    <div class="pick"
+                        style="background:#fff8e6;border-color:#f0d78c">
+
+                        <b>Claimant (${esc(c.by)}) says:</b><br>
+                        ${esc(c.details)}
+                    </div>
+
+                    <button class="btn sm ok"
+                        onclick="decide('c','${esc(c.id)}','approved')">
+                        Approve claim
+                    </button>
+
+                    <button class="btn sm bad"
+                        onclick="decide('c','${esc(c.id)}','rejected')">
+                        Reject claim
+                    </button>
+                </div>`;
             }).join("")
             : `<div class="empty">
                 No claims waiting for review.
@@ -1057,15 +1042,51 @@ function vAdmin() {
                             Pick up at: ${esc(r.auth || "not set")}
                         </div>
 
-                        <button class="btn sm"
+                        <button class="btn sm ok"
                             onclick="decide('m','${esc(c.id)}')">
-                            Mark as returned
+                            Confirm returned to owner
                         </button>
                     </div>
                 `;
             }).join("")
             : `<div class="empty">
                 No approved claims waiting for pickup.
+            </div>`;
+    }
+
+    if (T === "returned") {
+        h += rt.length
+            ? rt.map(function(r) {
+                var c = db.claims.find(function(x) {
+                    return x.rid === r.id && x.status === "returned";
+                });
+
+                var when = r.returnedAt && r.returnedAt.toDate
+                    ? r.returnedAt.toDate().toLocaleString()
+                    : "";
+
+                return `
+                    <div class="card">
+                        <h3>${esc(r.title)}</h3>
+
+                        <div class="meta">
+                            Returned to: ${esc(c ? c.by : "unknown")}<br>
+                            Confirmed by: ${esc(r.returnedByEmail || "an admin")}<br>
+                            ${when ? "On: " + esc(when) : ""}
+                        </div>
+
+                        ${c
+                            ? `<button class="btn sm bad"
+                                onclick="decide('u','${esc(c.id)}')">
+                                Not actually returned (undo)
+                            </button>`
+                            : ""
+                        }
+                    </div>
+                `;
+            }).join("")
+            : `<div class="empty">
+                No items have been confirmed as returned yet.
             </div>`;
     }
 
@@ -1096,9 +1117,7 @@ function vAdmin() {
 }
 
 
-/* =====================================================
-   15. ADMIN ACTIONS
-====================================================== */
+//Admin Actions
 
 async function decide(k, id, v) {
     try {
@@ -1157,17 +1176,47 @@ async function decide(k, id, v) {
 
             } else if (k === "m") {
 
+                if (!confirm("Confirm that \"" + r.title +
+                    "\" was handed over to " + c.by + "?")) {
+                    return;
+                }
+
                 await firestore.collection("reports")
                     .doc(String(r.id))
                     .update({
                         status: "returned",
-                        returnedAt: serverTime()
+                        returnedAt: serverTime(),
+                        returnedBy: S.user.uid,
+                        returnedByEmail: S.user.email
                     });
 
                 await firestore.collection("claims")
                     .doc(String(id))
                     .update({
                         status: "returned"
+                    });
+
+            } else if (k === "u") {
+
+                // Admin made a mistake: the item was NOT returned
+                if (!confirm("Mark \"" + r.title +
+                    "\" as NOT returned? It goes back to the Handover list.")) {
+                    return;
+                }
+
+                await firestore.collection("reports")
+                    .doc(String(r.id))
+                    .update({
+                        status: "claim_pending",
+                        returnedAt: firebase.firestore.FieldValue.delete(),
+                        returnedBy: firebase.firestore.FieldValue.delete(),
+                        returnedByEmail: firebase.firestore.FieldValue.delete()
+                    });
+
+                await firestore.collection("claims")
+                    .doc(String(id))
+                    .update({
+                        status: "approved"
                     });
             }
         }
@@ -1181,9 +1230,7 @@ async function decide(k, id, v) {
 }
 
 
-/* =====================================================
-   16. APPLICATION SHELL AND NAVIGATION
-====================================================== */
+//Application and shell navigation
 
 var TITLES = {
     feed: "CampusFind",
@@ -1258,8 +1305,8 @@ function draw(keepFocus) {
 
             ${sub
                 ? `<button
-                    onclick="go('${v === "claim" ? "detail" : "feed"}')"
-                    aria-label="Back">←</button>`
+                onclick="go('${v === "claim" ? "detail" : "feed"}')"
+                aria-label="Back">←</button>`
                 : ""
             }
 
@@ -1269,9 +1316,9 @@ function draw(keepFocus) {
                 onclick="logout()"
                 aria-label="Log out"
                 style="font-size:13px;
-                    border:1px solid rgba(255,255,255,.5);
-                    border-radius:6px;
-                    padding:4px 9px">
+                border:1px solid rgba(255,255,255,.5);
+                border-radius:6px;
+                padding:4px 9px">
                 Log out
             </button>
 
@@ -1284,10 +1331,10 @@ function draw(keepFocus) {
         <nav>
             ${nav.map(function(n) {
                 return `
-                    <button class="${v === n[0] ? "on" : ""}"
-                        onclick="setNav('${n[0]}')">
-                        <b>${n[1]}</b>
-                        ${n[2]}
+                <button class="${v === n[0] ? "on" : ""}"
+                    onclick="setNav('${n[0]}')">
+                    <b>${n[1]}</b>
+                    ${n[2]}
                     </button>
                 `;
             }).join("")}
@@ -1312,13 +1359,10 @@ function draw(keepFocus) {
 }
 
 
-/* (Firebase Auth State Listener now lives in auth.js) */
+// Firebase Auth State Listener now transferred to in auth.js
 
 
-/* =====================================================
-   18. EVENT LISTENERS
-====================================================== */
-
+//Event Listeners 
 document.addEventListener("change", function(e) {
     if (S.view === "post") {
         keep();
@@ -1336,8 +1380,5 @@ document.addEventListener("deviceready", function() {
 }, false);
 
 
-/* =====================================================
-   19. INITIALIZE APPLICATION
-====================================================== */
-
+//initialize the application 
 draw();
