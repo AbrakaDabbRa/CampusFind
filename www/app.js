@@ -120,6 +120,12 @@ function canSeeDesc(r) {
         (S.user.admin === true || r.ownerUid === S.user.uid);
 }
 
+// Photos follow the same rule as descriptions: only admins and the
+// person who posted the report can see the photo.
+function canSeePhoto(r) {
+    return canSeeDesc(r);
+}
+
 function newestFirst(a, b) {
     var timeA = a.createdAt && a.createdAt.toMillis
         ? a.createdAt.toMillis()
@@ -176,6 +182,7 @@ function go(view, id) {
 
     if (id !== undefined) {
         S.sel = id;
+        S.su = undefined;
     }
 
     draw();
@@ -269,7 +276,7 @@ function card(r) {
         <div class="card item" onclick="go('detail','${esc(r.id)}')">
 
             <div class="thumb">
-                ${r.photo
+                ${r.photo && canSeePhoto(r)
                     ? `<img class="thumb" src="${esc(r.photo)}" alt="">`
                     : "📦"}
             </div>
@@ -372,7 +379,7 @@ function vDetail() {
     var mine = r.ownerUid === S.user.uid;
     var h = "";
 
-    h += r.photo
+    h += r.photo && canSeePhoto(r)
         ? `<img class="photo" src="${esc(r.photo)}" alt="">`
         : "";
 
@@ -413,6 +420,41 @@ function vDetail() {
                 The finder is still holding this item.`
                 }
             </div> `;
+    }
+
+    if (r.submittedTo) {
+        h += `
+            <div class="pick">
+                Item has been submitted to <b>${esc(r.submittedTo)}</b>
+            </div>
+        `;
+    }
+
+    if (S.user.admin === true && r.status !== "rejected") {
+        h += `
+            <div class="card">
+                <b>Local authority (admin only)</b>
+
+                <label>To which local authority was the item submitted</label>
+                <select id="su2" onchange="S.su=this.value">
+                    <option value="">Select a location</option>
+                    ${PLACES.map(function(c) {
+                        var cur = S.su !== undefined
+                            ? S.su
+                            : (r.submittedTo || "");
+
+                        return `<option${cur === c ? " selected" : ""}>${esc(c)}</option>`;
+                    }).join("")}
+                </select>
+
+                <div class="err" id="er"></div>
+
+                <button class="btn"
+                    onclick="setSubmittedTo('${esc(r.id)}')">
+                    Save
+                </button>
+            </div>
+        `;
     }
 
     var myc = db.claims.find(function(c) {
@@ -642,6 +684,15 @@ function vPost() {
                     }).join("")}
                 </select>
             ` : ""}
+
+            <label>To which local authority was the item submitted
+                (optional)</label>
+            <select id="su">
+                <option value="">Select a location</option>
+                ${PLACES.map(function(c) {
+                    return `<option>${esc(c)}</option>`;
+                }).join("")}
+            </select>
         ` : ""}
 
         <label>Photo (optional)</label>
@@ -669,7 +720,7 @@ function vPost() {
 
 function keep() {
     [
-        "ti", "ca", "de", "pl", "dt", "hd", "au"
+        "ti", "ca", "de", "pl", "dt", "hd", "au", "su"
     ].forEach(function(k) {
         if ($(k)) {
             draft[k] = $(k).value;
@@ -772,6 +823,9 @@ async function sendReport() {
 
         handed: hd,
         auth: hd ? $("au").value : "",
+        submittedTo: f && PLACES.indexOf($("su").value) > -1
+            ? $("su").value
+            : "",
 
         photo: S.photo || "",
 
@@ -1114,6 +1168,45 @@ function vAdmin() {
     }
 
     return h;
+}
+
+
+//Admin: record which local authority has the item
+
+async function setSubmittedTo(id) {
+    var r = rep(id);
+    var er = $("er");
+
+    if (er) er.textContent = "";
+
+    if (!r || !S.user || S.user.admin !== true) {
+        return;
+    }
+
+    var v = $("su2").value;
+
+    if (PLACES.indexOf(v) === -1) {
+        er.textContent = "Select a location first.";
+        return;
+    }
+
+    try {
+        await firestore.collection("reports")
+            .doc(String(r.id))
+            .update({
+                submittedTo: v,
+                submittedAt: serverTime()
+            });
+
+        toast("Saved.");
+        go("detail", id);
+
+    } catch (error) {
+        console.error("Submitted-to update error:", error);
+
+        er.textContent =
+            "Unable to save. Please try again.";
+    }
 }
 
 
